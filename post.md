@@ -3,114 +3,88 @@ If you don't know what Ideckia is, I wrote an [introductory post](https://dev.to
 
 To get some context, this is how the Ideckia server works:
 
-* Read the `layout.json` file where all the items are defined (with their attatched actions).
-* Initializes all the actions defined in that file injecting to each instance the properties defined for each case.
+* Read the `layout.json` file where all the items are defined (with their attached actions).
+* Initializes all the actions defined in that file and injects to action each instance the properties defined for each case.
 
 In this post we will create our very first Ideckia action, a simple parametrized action to update an item with a text, we will follow these steps:
 
 * Create the JavaScript file with the Ideckia actions structure
-* Add a property to that file to be configurable from the editor
-* Configure the new action in the editor
-* Add the code to be executed when the item is clicked.
+* Configure the new action in the editor.
+* Check it is working as expected
 
-As a proof of what easy (and fast) is to create an action for Ideckia: I've created the action itself, configured it in the editor, documented each step, took screenshots, write a basic post, some bugfixes in the server... and it took me **only 20 minutes**.
+As a proof of what easy (and fast) is to create an action for Ideckia: I've created the action itself, configured it in the editor, documented each step, took screenshots, write a basic post, some bugfixes in the server... and it took me **only 10 minutes**.
 
-### Creation of the action files
+### Creation of the action file
 
-If we haven't got Ideckia installed in our machine, we must download [Ideckia](https://ideckia.github.io) and uncompress it in a directory.
+If we haven't Ideckia in our machine, we must [download](https://ideckia.github.io) and uncompress it in a directory.
 
-Ideckia gives us a command to create a very basic actions from templates, so let's tell it to create one!
+Go to the `actions` directory and create a new directory called `simpleaction` (or the name you prefer, is your action!). Inside that directory create a file called `index.js`, this name is mandatory, so you can't pick another one, sorry.
 
-* Open a terminal
-* Go to where Ideckia executable is
-* Execute the command `ideckia --new-action` (`ideckia.exe --new-action` in Windows)
-* It will ask you for a few configurations to create the action:
-  * What language do you want to create the action. Current options are Haxe or Javascript. For this example, I will pick JS because you don't have to have nothing spetial installed.
-  * A name for the action
-  * A brief description of what this actions does
-
-![Creation command output](img/creation_cmd.png)
-
-Ideckia has just created a directory with the name of our new action inside of `actions` directory. Open that directory in your preferred editor and this is what that directory contains:
-
-![Files for the action](img/files.png)
-
-To have the action running, the only needed file is `index.js` actually. It follows the structure defined [here](https://github.com/ideckia/ideckia_api#action-structure)
+Paste this code in the `index.js` file.
 
 ```javascript
-class Simpleaction {
+class SimpleAction {
 
+    // Method called to inject the properties and server access (dialogs, logs...)
     setup(props, server) {
         this.props = props == null ? {} : props;
+        if (this.props.name == null) {
+            this.props.name = 'Ideckia';
+        }
         this.server = server;
     }
 
+    // Method called when the action is loaded
     init(initialState) {
         return new Promise((resolve, reject) => {
             resolve(initialState);
         });
     }
 
+    // Method called when the item is clicked in the client
     execute(currentState) {
-        throw 'Not implemented';
-        // return new Promise((resolve, reject) => {
-        // 		resolve(currentState);
-        // });
+        return new Promise((resolve, reject) => {
+            currentState.text = `Clicked at ${Date.now()}`;
+            this.server.dialog.info('Extra! Extra!', `A simple hello from a simple action! My name is [${this.props.name}]!`);
+            resolve(currentState);
+        });
     }
 
+    // Method called when the item is long pressed in the client
     onLongPress(currentState) {
         return new Promise((resolve, reject) => {
             resolve(currentState);
         });
     }
 
+    // Method called from the editor to create an UI to configure the action
     getActionDescriptor() {
         return {
             name: "simpleaction",
             description: "Demo of a simple Ideckia action",
-            // props : [{
-            // 	name : "propertyName",
-            // 	type : "String",
-            // 	isShared : false,
-            //	defaultValue: "default value",
-            // 	description : "property description",
-            // 	values : ["possible", "values", "for the property"]
-            // }]
+            props: [{
+                name: "name",
+                type: "String",
+                isShared: false,
+                defaultValue: "Ideckia",
+                description: "A name shown in the window",
+                values: []
+            }]
         };
     }
 }
 
-exports.IdeckiaAction = Simpleaction;
+exports.IdeckiaAction = SimpleAction;
 ```
+### Explanation
 
-There are some other files, but they are helpers:
+There are two methods that needs to be explained: `execute` and `getActionDescriptor`.
 
-* `readme.md`: Who doesn't know what is that file for?
-* `presets.json`: There will go some property definitions for common use cases. They will load to select in the editor.
-* `test_action.js`: A JS file for loading and executing the `index.js` to be more agile when testing the action.
+* `execute`: This method is called when the item is clicked in the client. The code we put in there will do this:
+  * Update the text of the client item.
+  * Show up a information dialog box with the given text. The text is the property called `name`.
+* `getActionDescriptor`: This method is called by the editor. It returns the properties that can be configured by the editor. In the example above, we've added the property `name`.
 
-### Add a configurable property
-
-As said in the first section, these properties are injected in the action instance when it is created so they can be accesible via `this.props` property. As we want to have a property called `name` to show in the item, in this case we will get the text from `this.props.name`.
-
-To have this property configurable from the built-in editor, our action must tell the server that that property exists. When the editor is opened, the server asks to every action loaded some information about them: action name, description, properties... This communication is made by the `ActionDescriptor` element returned by the `getActionDescriptor()` function. With this information, the editor can build the UI for the configuration of every action. Update the `index.js` file and paste this piece of code.
-
-```javascript
-getActionDescriptor() {
-    return {
-        name: "simpleaction",
-        description: "Demo of a simple Ideckia action",
-        props: [{
-            name: "name",
-            type: "String",
-            isShared: false,
-            defaultValue: "Ideckia",
-            description: "A name shown in the window",
-            values: []
-        }]
-    };
-}
-```
 
 ### Configure the action
 
@@ -142,11 +116,24 @@ Set the property of our action
 
 Click the `Update server layout` button to save the changes.
 
-### Change the code
+### Time to test
 
-Ok, our action is configured in the layout. But, what will this action do?
+Be sure you have Ideckia running. Open an Ideckia client ([mobile](https://github.com/ideckia/mobile_client/releases/latest), [desktop](https://github.com/josuigoa/ideckia_client/releases/latest)). If you don't have any of these, the [editor](http://localhost:8888/editor) can be used as client checking the checkbox in the top right corner. Once it is selected, any click on an item will be considered a click in a client, triggering the action in the server.
 
-Is time to use the property and update the item. When the item is clicked in the client, the function `execute(currentState)` of the action is executed. It will return a Promise with the state to show in the item. The state has these properties:
+So, click the item in any (or every!) client connected to the server _et voilà!_ The item text will show the current timestamp and a info dialog box will pop up in your screen.
+
+![Info dialog](img/dialog.png)
+
+[Here](https://github.com/josuigoa/simpleaction) is the entire code of this project
+
+### Change the code and play with it
+
+Ok, you've seen what is going on. Now it is time to tinker with the new action. What will happen if you...
+
+* Add a new property to change the title of the dialog box?
+* Change the background color of the item when it is clicked?
+
+Remember that the state of the item has this structure:
 
 ```javascript
 ItemState = {
@@ -159,24 +146,4 @@ ItemState = {
 }
 ```
 
-We will change the `text` property of the incoming state to add the current timestamp and show an information dialog to the user showing the configured text. Replace the `index.js` `execute` function by this block:
-
-```javascript
-execute(currentState) {
-    return new Promise((resolve, reject) => {
-        currentState.text = `Clicked at ${Date.now()}`;
-        this.server.dialog.info('Extra! Extra!', `A simple hello from a simple action! My name is [${this.props.name}]!`);
-        resolve(currentState);
-    });
-}
-```
-
-### Time to test
-
-Open an Ideckia client ([mobile](https://github.com/ideckia/mobile_client/releases/latest), [desktop](https://github.com/josuigoa/ideckia_client/releases/latest)). If you don't have any of these, the [editor](http://localhost:8888/editor) can be used as client checking the checkbox in the top right corner. Once it is selected, any click on an item will be considered a click in a client, triggering the action in the server.
-
-So, click the item in any (or every!) client connected to the server _et voilà!_ The item text will show the current timestamp and a info dialog box will pop up in your screen.
-
-![Info dialog](img/dialog.png)
-
-[Here](https://github.com/josuigoa/simpleaction) is the entire code of this project
+Have fun!
